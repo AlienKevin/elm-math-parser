@@ -22,7 +22,7 @@ main =
         (case parse sourceCode of
             Err err ->
                 column []
-                    [ text (displayError err)
+                    [ text (displayError sourceCode err)
                     ]
 
             Ok expression ->
@@ -32,22 +32,22 @@ main =
                     ]
         )
 
-displayError : List DeadEnd -> String
-displayError errs =
+displayError : String -> List DeadEnd -> String
+displayError source errs =
     case List.head errs of
         Nothing ->
             ""
 
         Just firstErr ->
-            sourceCode
+            source
                 ++ "\n"
                 ++ String.repeat (firstErr.col - 1) " "
                 ++ "^"
                 ++ "\nExpecting "
-                ++ (String.join
+                ++ String.join
                     " or "
                     (List.map displayExpected errs)
-                )
+
 
 displayExpected : DeadEnd -> String
 displayExpected err =
