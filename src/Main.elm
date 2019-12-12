@@ -75,6 +75,12 @@ evaluate expression =
         Div a b ->
             evaluate a / evaluate b
 
+        Exp a b ->
+            evaluate a ^ evaluate b
+
+        Neg a ->
+            negate (evaluate a)
+
         Grouping l ->
             evaluate l
 
@@ -87,6 +93,8 @@ type Expr
     | Sub Expr Expr
     | Mul Expr Expr
     | Div Expr Expr
+    | Exp Expr Expr
+    | Neg Expr
     | Literal Float
     | Grouping Expr
 
@@ -106,6 +114,7 @@ type Operator
     | DivOp
     | AddOp
     | SubOp
+    | ExpOp
 
 
 type Operand
@@ -133,6 +142,9 @@ binary a b =
                 SubOp ->
                     Sub a e
 
+                ExpOp ->
+                    Exp a e
+
 
 add : Parser Expr
 add =
@@ -157,7 +169,7 @@ mul : Parser Expr
 mul =
     succeed
         binary
-        |= primary
+        |= exp
         |. spaces
         |= oneOf
             [ succeed (Operand MulOp)
@@ -172,9 +184,37 @@ mul =
             ]
 
 
+exp : Parser Expr
+exp =
+    succeed
+        binary
+        |= primary
+        |. spaces
+        |= oneOf
+            [ succeed (Operand ExpOp)
+                |. symbol "^"
+                |. spaces
+                |= lazy (\_ -> exp)
+            , succeed NoOperand
+            ]
+
+
 primary : Parser Expr
 primary =
-    oneOf
+    succeed (\op literal ->
+            case op of
+                Nothing ->
+                    literal
+
+                Just _ ->
+                    Neg literal
+        )
+    |= oneOf
+        [ succeed Just
+            |= symbol "-"
+        , succeed Nothing
+        ]
+    |= oneOf
         [ grouping
         , real
         ]
@@ -182,22 +222,7 @@ primary =
 
 real : Parser Expr
 real =
-    succeed
-        (\op num ->
-            Literal
-                (case op of
-                    Nothing ->
-                        num
-
-                    Just _ ->
-                        negate num
-                )
-        )
-        |= oneOf
-            [ succeed Just
-                |= symbol "-"
-            , succeed Nothing
-            ]
+    succeed Literal
         |= number
             { int = Just toFloat
             , hex = Nothing
