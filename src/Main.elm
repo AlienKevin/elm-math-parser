@@ -149,20 +149,34 @@ binary a b =
 add : Parser Expr
 add =
     succeed
-        binary
+        foldBinary
         |= mul
         |. spaces
-        |= oneOf
-            [ succeed (Operand AddOp)
-                |. symbol "+"
-                |. spaces
-                |= lazy (\_ -> add)
-            , succeed (Operand SubOp)
-                |. symbol "-"
-                |. spaces
-                |= lazy (\_ -> add)
-            , succeed NoOperand
-            ]
+        |= loop [] addHelper
+
+
+foldBinary : Expr -> List Operand -> Expr
+foldBinary left operands =
+    List.foldr
+    (\operand expression -> binary expression operand)
+    left
+    operands
+
+
+addHelper : List Operand -> Parser (Step (List Operand) (List Operand))
+addHelper operands =
+    oneOf
+        [ succeed (\right -> Loop (Operand AddOp right :: operands))
+            |. symbol "+"
+            |. spaces
+            |= lazy (\_ -> mul)
+        , succeed (\right -> Loop (Operand SubOp right :: operands))
+            |. symbol "-"
+            |. spaces
+            |= lazy (\_ -> mul)
+        , succeed ()
+            |> map (\_ -> Done operands)
+        ]
 
 
 mul : Parser Expr
