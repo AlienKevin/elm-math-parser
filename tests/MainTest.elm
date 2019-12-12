@@ -2,7 +2,7 @@ module MainTest exposing (..)
 
 import Test exposing (..)
 import Expect
-import Main exposing (parse, evaluate, displayError)
+import MathParser exposing (parse, evaluate, displayError)
 
 
 type alias Value =
