@@ -1,4 +1,4 @@
-module Main exposing (main)
+module Main exposing (main, parse, evaluate, displayError)
 
 import Html exposing (Html)
 import Element exposing (column, text, padding)
@@ -7,8 +7,12 @@ import Parser exposing (..)
 
 sourceCode : String
 sourceCode =
-    "2 * ( -4 / -4 + 2 ) - 4"
+    -- "2 * ( -4^2 / -4 + 2 ) - 4"
     -- "-2 * - 6"
+    -- "2 ^ 3 ^ 2"
+    -- "-3 ^ 2"
+    -- "0 - 2 + 2"
+    "-2 / -2.58 * 0.002"
 
 main : Html msg
 main =
@@ -182,20 +186,26 @@ addHelper operands =
 mul : Parser Expr
 mul =
     succeed
-        binary
+        foldBinary
         |= exp
         |. spaces
-        |= oneOf
-            [ succeed (Operand MulOp)
-                |. symbol "*"
-                |. spaces
-                |= lazy (\_ -> mul)
-            , succeed (Operand DivOp)
-                |. symbol "/"
-                |. spaces
-                |= lazy (\_ -> mul)
-            , succeed NoOperand
-            ]
+        |= loop [] mulHelper
+
+
+mulHelper : List Operand -> Parser (Step (List Operand) (List Operand))
+mulHelper operands =
+    oneOf
+        [ succeed (\right -> Loop (Operand MulOp right :: operands))
+            |. symbol "*"
+            |. spaces
+            |= lazy (\_ -> exp)
+        , succeed (\right -> Loop (Operand DivOp right :: operands))
+            |. symbol "/"
+            |. spaces
+            |= lazy (\_ -> exp)
+        , succeed ()
+            |> map (\_ -> Done operands)
+        ]
 
 
 exp : Parser Expr
